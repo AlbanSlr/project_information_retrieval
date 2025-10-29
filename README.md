@@ -1,1 +1,2 @@
-# project_information_retrieval
+# Project - Information Retrieval
+### Alban Sellier & Rémi Geraud
