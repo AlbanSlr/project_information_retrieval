@@ -39,3 +39,4 @@ def compute_tf_idf(file_paths):
     for file_path, tf in term_frequencies.items():
         tf_idf[file_path] = {word: freq * idf.get(word, 0) for word, freq in tf.items()}
     return tf_idf
+
