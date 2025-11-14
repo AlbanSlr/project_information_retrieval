@@ -1,10 +1,6 @@
-<<<<<<< Updated upstream
-#les datas extraites de wikipedia (dezippées)
-/data/wiki_split_extract_2k
-=======
 .DS_Store
 __MACOSX/
-wiki_split_extract_2k/
 __pycache__/
 tempCodeRunnerFile.py
->>>>>>> Stashed changes
+venv/
+*.png

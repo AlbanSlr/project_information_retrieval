@@ -1,10 +1,20 @@
+"""
+Evaluation module for the information retrieval system.
+Provides metrics for assessing search engine performance.
+"""
 import json
-import math
-import os
-from compute_TFIDF import compute_tf_idf
 
 
 def load_queries(filepath):
+    """
+    Load queries from JSONL file.
+    
+    Args:
+        filepath (str): Path to JSONL file containing queries
+    
+    Returns:
+        list: List of dicts with 'query' and 'answer' keys
+    """
     query_answer_pairs = []
     with open(filepath, 'r', encoding='utf-8') as f:
         for line in f:
@@ -19,45 +29,18 @@ def load_queries(filepath):
     return query_answer_pairs
 
 
-def load_tfidf_index(data_path):
-    file_paths = [data_path + file for file in os.listdir(data_path) if file.endswith('.txt')]
-    tf_idf = compute_tf_idf(file_paths)
-    return tf_idf
-
-
-def compute_cosine_similarity(query_vector, doc_vector):
-    dot_product = sum(query_vector.get(word, 0) * doc_vector.get(word, 0) 
-                     for word in set(query_vector.keys()) | set(doc_vector.keys()))
-    
-    query_magnitude = math.sqrt(sum(val ** 2 for val in query_vector.values()))
-    doc_magnitude = math.sqrt(sum(val ** 2 for val in doc_vector.values()))
-    
-    if query_magnitude == 0 or doc_magnitude == 0:
-        return 0
-    
-    return dot_product / (query_magnitude * doc_magnitude)
-
-
-def search(query, tf_idf, top_k=10):
-    query_words = query.lower().split()
-    word_counts = {}
-    for word in query_words:
-        word_counts[word] = word_counts.get(word, 0) + 1
-    
-    query_vector = {word: count / len(query_words) for word, count in word_counts.items()}
-    
-    scores = []
-    for doc_path, doc_vector in tf_idf.items():
-        score = compute_cosine_similarity(query_vector, doc_vector)
-        if score > 0:
-            filename = doc_path.split('/')[-1]
-            scores.append((filename, score))
-    
-    scores.sort(key=lambda x: x[1], reverse=True)
-    return scores[:top_k]
-
-
 def calculate_precision_at_k(expected_file, results, k):
+    """
+    Calculate Precision@K using reciprocal rank.
+    
+    Args:
+        expected_file (str): Expected result filename
+        results (list): List of (filename, score) tuples
+        k (int): Number of top results to consider
+    
+    Returns:
+        float: Precision score (1/rank if found in top-k, else 0)
+    """
     if not results:
         return 0
     retrieved_files = [filename for filename, score in results[:k]]
@@ -67,13 +50,51 @@ def calculate_precision_at_k(expected_file, results, k):
 
 
 def calculate_recall_at_k(expected_file, results, k):
+    """
+    Calculate Recall@K (binary: 1 if found, 0 otherwise).
+    
+    Args:
+        expected_file (str): Expected result filename
+        results (list): List of (filename, score) tuples
+        k (int): Number of top results to consider
+    
+    Returns:
+        float: 1.0 if expected file is in top-k, 0.0 otherwise
+    """
     if not results:
         return 0
     retrieved_files = [filename for filename, score in results[:k]]
     return 1 if expected_file in retrieved_files else 0
 
 
-def evaluate(queries, tf_idf, k=10):
+def calculate_f1_score(precision, recall):
+    """
+    Calculate F1 score from precision and recall.
+    
+    Args:
+        precision (float): Precision value
+        recall (float): Recall value
+    
+    Returns:
+        float: F1 score
+    """
+    if precision + recall == 0:
+        return 0
+    return 2 * (precision * recall) / (precision + recall)
+
+
+def evaluate_search_engine(search_engine, queries, k=10):
+    """
+    Evaluate search engine performance on a set of queries.
+    
+    Args:
+        search_engine: SearchEngine instance with search() method
+        queries (list): List of query-answer pairs
+        k (int): Number of top results to consider
+    
+    Returns:
+        dict: Evaluation metrics (precision, recall, f1, num_queries)
+    """
     total_precision = 0
     total_recall = 0
     num_queries = len(queries)
@@ -81,7 +102,7 @@ def evaluate(queries, tf_idf, k=10):
     for item in queries:
         query = item['query']
         expected_file = item['answer']
-        results = search(query, tf_idf, top_k=k)
+        results = search_engine.search(query, top_k=k)
         
         precision = calculate_precision_at_k(expected_file, results, k)
         recall = calculate_recall_at_k(expected_file, results, k)
@@ -91,7 +112,7 @@ def evaluate(queries, tf_idf, k=10):
     
     avg_precision = total_precision / num_queries
     avg_recall = total_recall / num_queries
-    avg_f1 = 2 * (avg_precision * avg_recall) / (avg_precision + avg_recall) if (avg_precision + avg_recall) > 0 else 0
+    avg_f1 = calculate_f1_score(avg_precision, avg_recall)
     
     return {
         'precision': avg_precision,
@@ -101,37 +122,54 @@ def evaluate(queries, tf_idf, k=10):
     }
 
 
-if __name__ == "__main__":
+def print_evaluation_results(metrics, config_name=""):
+    """
+    Print evaluation results in a formatted way.
+    
+    Args:
+        metrics (dict): Evaluation metrics
+        config_name (str): Optional configuration name
+    """
+    if config_name:
+        print(f"\n{'='*70}")
+        print(f"Configuration: {config_name}")
+        print(f"{'='*70}")
+    
+    print(f"Queries evaluated: {metrics['num_queries']}")
+    print(f"Precision@10:      {metrics['precision']:.4f}")
+    print(f"Recall@10:         {metrics['recall']:.4f}")
+    print(f"F1@10:             {metrics['f1']:.4f}")
+
+
+def main():
+    """
+    Example evaluation script.
+    """
+    from search_engine import SearchEngine
+    
+    # Load queries
     print("Loading queries...")
     queries = load_queries('requetes.jsonl')
-    print(f"Loaded {len(queries)} queries")
+    print(f"Loaded {len(queries)} queries\n")
     
-    print("\nBuilding TF-IDF index...")
-    tf_idf = load_tfidf_index('wiki_split_extract_2k/')
-    print(f"Indexed {len(tf_idf)} documents")
+    # Initialize and build search engine
+    print("Building search engine...")
+    engine = SearchEngine(
+        clean_params={
+            'remove_punctuation': True,
+            'remove_stopwords': True,
+            'lemmatize': True
+        },
+        use_log_tf=True
+    )
+    engine.load_documents('wiki_split_extract_2k/')
+    engine.build_index()
     
-    print("\nEvaluating...")
-    metrics = evaluate(queries, tf_idf, k=10)
-    
-    print("\n" + "="*60)
-    print("EVALUATION RESULTS")
-    print("="*60)
-    print(f"Total queries: {metrics['num_queries']}")
-    print(f"Precision@10:  {metrics['precision']:.4f}")
-    print(f"Recall@10:     {metrics['recall']:.4f}")
-    print(f"F1@10:         {metrics['f1']:.4f}")
-    print("="*60)
-    
-    print("\nExample search results (first 5 queries):")
-    print("-"*60)
-    for i, item in enumerate(queries[:5]):
-        query = item['query']
-        expected_file = item['answer']
-        results = search(query, tf_idf, top_k=5)
-        
-        print(f"\nQuery {i+1}: '{query}'")
-        print(f"Expected: {expected_file}")
-        print("Top 5 results:")
-        for rank, (filename, score) in enumerate(results, 1):
-            marker = " OK" if filename == expected_file else ""
-            print(f"  {rank}. {filename} (score: {score:.4f}){marker}")
+    # Evaluate
+    print("\nEvaluating search engine...")
+    metrics = evaluate_search_engine(engine, queries, k=10)
+    print_evaluation_results(metrics, "TF-IDF with text cleaning and log TF")
+
+
+if __name__ == "__main__":
+    main()
