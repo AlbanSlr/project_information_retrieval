@@ -1,5 +1,5 @@
 # Makefile for Information Retrieval Search Engine
-# Project: French Wikipedia Search Engine with TF-IDF
+# Project: French Wikipedia Search Engine with TF-IDF (Optimized)
 
 PYTHON := python
 VENV := venv
@@ -8,8 +8,9 @@ PIP := $(VENV_BIN)/pip
 PYTHON_VENV := $(VENV_BIN)/python
 DATA_DIR := wiki_split_extract_2k
 QUERIES_FILE := requetes.jsonl
+CACHE_DIR := data
 
-.PHONY: help setup install download-model test search compare clean
+.PHONY: help setup install download-models search compare-features compare-models compare clean clean-cache
 
 help:
 	@echo "================================================================"
@@ -18,28 +19,34 @@ help:
 	@echo ""
 	@echo "Available commands:"
 	@echo ""
-	@echo "  make setup           - Complete setup (venv + dependencies + model)"
-	@echo "  make search          - Interactive search demo"
-	@echo "  make compare         - Compare different configurations"
-	@echo "  make clean           - Remove generated files and cache"
+	@echo "  make setup           - Complete setup (venv + dependencies + models)"
+	@echo "  make search          - Interactive search with TF-IDF (log + cleaning)"
+	@echo "  make compare-features - Compare TF-IDF feature configurations"
+	@echo "  make compare-models  - Compare different models (TF-IDF, SBERT, Hybrid)"
+	@echo "  make compare         - Run both comparisons"
+	@echo "  make clean           - Remove generated files"
+	@echo "  make clean-cache     - Remove cached models and vectors"
 	@echo ""
 	@echo "Quick start:"
-	@echo "  1. make setup        - Setup environment (first time only)"
-	@echo "  2. make search       - Interactive search demo"
-	@echo "  3. make compare      - Compare configurations"
+	@echo "  1. make setup            - Setup environment (first time only)"
+	@echo "  2. make search           - Try the optimized TF-IDF search"
+	@echo "  3. make compare-features - Compare TF-IDF configurations"
+	@echo "  4. make compare-models   - Compare TF-IDF vs SBERT vs Hybrid"
 	@echo ""
 	@echo "================================================================"
 
-setup: $(VENV) install download-model
+setup: $(VENV) install download-models
 	@echo ""
 	@echo "================================================================"
 	@echo "Setup complete!"
 	@echo "================================================================"
 	@echo ""
 	@echo "Next steps:"
-	@echo "  - Run 'make test' to evaluate the search engine"
-	@echo "  - Run 'make search' for interactive search"
-	@echo "  - Run 'make compare' to compare configurations"
+	@echo "  - Run 'make search' for interactive TF-IDF search"
+	@echo "  - Run 'make compare-features' to compare TF-IDF configurations"
+	@echo "  - Run 'make compare-models' to compare different models"
+	@echo ""
+	@echo "Note: Main engine is TF-IDF (log + cleaning) - optimal performance"
 	@echo ""
 
 $(VENV):
@@ -51,19 +58,21 @@ install: $(VENV)
 	@echo ""
 	@echo "Installing Python dependencies..."
 	$(PIP) install --upgrade pip
-	$(PIP) install spacy scikit-learn matplotlib numpy
+	$(PIP) install spacy scikit-learn matplotlib numpy sentence-transformers
 	@echo "Dependencies installed successfully"
 
-download-model: $(VENV)
+download-models: $(VENV)
+download-models: $(VENV)
 	@echo ""
-	@echo "Downloading spaCy French language model..."
+	@echo "Downloading required models..."
 	$(PYTHON_VENV) -m spacy download fr_core_news_sm
-	@echo "Language model downloaded successfully"
+	@echo "Models downloaded successfully"
+	@echo ""
 
 search: $(VENV)
 	@echo ""
 	@echo "================================================================"
-	@echo "Starting interactive search engine..."
+	@echo "Starting TF-IDF search engine (log + cleaning)"
 	@echo "================================================================"
 	@echo ""
 	$(PYTHON_VENV) search_engine.py
@@ -72,115 +81,56 @@ search: $(VENV)
 	@echo "Search session ended"
 	@echo "================================================================"
 
-compare: $(VENV)
+compare-features: $(VENV)
 	@echo ""
 	@echo "================================================================"
-	@echo "Comparing different feature configurations..."
+	@echo "Comparing TF-IDF feature configurations..."
 	@echo "================================================================"
 	@echo ""
 	$(PYTHON_VENV) compare_features.py
 	@echo ""
 	@echo "================================================================"
-	@echo "Comparison complete - Check generated PNG files"
+	@echo "Feature comparison complete - Check tfidf_features_comparison.png"
+	@echo "================================================================"
+
+compare-models: $(VENV)
+	@echo ""
+	@echo "================================================================"
+	@echo "Comparing search models (TF-IDF, SBERT, Hybrid)..."
+	@echo "================================================================"
+	@echo ""
+	$(PYTHON_VENV) compare_models.py
+	@echo ""
+	@echo "================================================================"
+	@echo "Model comparison complete - Check model_comparison.png"
+	@echo "================================================================"
+
+compare: compare-features compare-models
+	@echo ""
+	@echo "================================================================"
+	@echo "All comparisons complete!"
+	@echo "Generated files:"
+	@echo "  - tfidf_features_comparison.png (TF-IDF feature ablation)"
+	@echo "  - model_comparison.png (Model comparison)"
 	@echo "================================================================"
 
 clean:
 	@echo "Cleaning generated files..."
 	rm -f *.png
 	rm -rf __pycache__
+	rm -rf engines/__pycache__
+	rm -rf utils/__pycache__
 	rm -rf .pytest_cache
 	find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
 	find . -type f -name "*.pyc" -delete
 	@echo "Clean complete"
 
-clean-all: clean
+clean-cache: clean
+	@echo "Removing cached models and vectors..."
+	rm -rf $(CACHE_DIR)
+	@echo "Cache cleaned - models will be retrained on next run"
+
+clean-all: clean clean-cache
 	@echo "Removing virtual environment..."
 	rm -rf $(VENV)
 	@echo "Complete cleanup done"
-
-# Tutorial commands for step-by-step setup
-tutorial-step1:
-	@echo "================================================================"
-	@echo "STEP 1: Environment Setup"
-	@echo "================================================================"
-	@echo ""
-	@echo "This will create a Python virtual environment with Python 3.12"
-	@echo "and install all required dependencies."
-	@echo ""
-	@echo "Run: make setup"
-	@echo ""
-	@echo "This installs:"
-	@echo "  - spaCy (NLP library for French text processing)"
-	@echo "  - scikit-learn (TF-IDF baseline for comparison)"
-	@echo "  - matplotlib (visualization)"
-	@echo "  - numpy (numerical operations)"
-	@echo "  - fr_core_news_sm (French language model)"
-	@echo ""
-
-tutorial-step2:
-	@echo "================================================================"
-	@echo "STEP 2: Test the Search Engine"
-	@echo "================================================================"
-	@echo ""
-	@echo "Once setup is complete, test the search engine with:"
-	@echo ""
-	@echo "  make test"
-	@echo ""
-	@echo "This will:"
-	@echo "  - Load 2000 Wikipedia documents from $(DATA_DIR)/"
-	@echo "  - Build TF-IDF index with text cleaning and lemmatization"
-	@echo "  - Evaluate on queries from $(QUERIES_FILE)"
-	@echo "  - Display Precision@10, Recall@10, and F1@10 metrics"
-	@echo ""
-
-tutorial-step3:
-	@echo "================================================================"
-	@echo "STEP 3: Interactive Search"
-	@echo "================================================================"
-	@echo ""
-	@echo "Try the search engine interactively:"
-	@echo ""
-	@echo "  make search"
-	@echo ""
-	@echo "This demonstrates the search engine with example queries."
-	@echo "The engine uses:"
-	@echo "  - TF-IDF vectorization with log(1+tf) normalization"
-	@echo "  - Inverted index for efficient term lookup"
-	@echo "  - Cosine similarity for document ranking"
-	@echo "  - Text preprocessing (stopword removal, lemmatization)"
-	@echo ""
-
-tutorial-step4:
-	@echo "================================================================"
-	@echo "STEP 4: Compare Configurations"
-	@echo "================================================================"
-	@echo ""
-	@echo "Compare different feature combinations:"
-	@echo ""
-	@echo "  make compare"
-	@echo ""
-	@echo "This compares 6 configurations:"
-	@echo "  1. Manual TF-IDF (baseline)"
-	@echo "  2. Manual TF-IDF with log normalization"
-	@echo "  3. Scikit-learn TF-IDF (baseline)"
-	@echo "  4. Manual with text cleaning"
-	@echo "  5. Manual with text cleaning + log"
-	@echo "  6. Scikit-learn with text cleaning"
-	@echo ""
-	@echo "Generates 3 graphs: precision, recall, and F1 scores"
-	@echo ""
-
-tutorial-full: tutorial-step1 tutorial-step2 tutorial-step3 tutorial-step4
-	@echo "================================================================"
-	@echo "Complete Tutorial"
-	@echo "================================================================"
-	@echo ""
-	@echo "To get started, run these commands in order:"
-	@echo ""
-	@echo "  1. make setup      - Install dependencies"
-	@echo "  2. make search     - Try interactive search"
-	@echo "  3. make compare    - Compare configurations"
-	@echo ""
-	@echo "For help at any time: make help"
-	@echo ""
-	@echo "================================================================"
