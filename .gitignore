@@ -1,8 +1,21 @@
 <<<<<<< Updated upstream
 #les datas extraites de wikipedia (dezippées)
-/data/wiki_split_extract_2k
+wiki_split_extract_2k/
+
+#fichiers temporaires python
+__pycache__/
+venv/
+
+#Fasttext files
+fasttext/cc.fr.300.vec
+fasttext/doc_vectors.npy
+fasttext/doc_names.json
+
+#Doc2vec
+doc2vec/doc_vectors.pkl
+
 =======
-.DS_Store
+.DS_Store   
 __MACOSX/
 wiki_split_extract_2k/
 __pycache__/
