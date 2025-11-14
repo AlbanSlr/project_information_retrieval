@@ -12,3 +12,6 @@ __pycache__/
 tempCodeRunnerFile.py
 venv/
 *.png
+
+# data files
+wiki_split_extract_2k/
