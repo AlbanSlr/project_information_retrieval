@@ -3,7 +3,11 @@ fasttext/cc.fr.300.vec
 fasttext/doc_vectors.npy
 fasttext/doc_names.json
 
+# Model and cache files
 *.pkl
+data/
+doc2vec/
+sbert_and_hybrid_tfsbert/
 
 #Python cache file, virtual env and macOS files
 .DS_Store   
@@ -15,3 +19,7 @@ venv/
 
 # data files
 wiki_split_extract_2k/
+
+# Backup files
+*.bak
+README.md.bak
