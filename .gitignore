@@ -1,4 +1,21 @@
-.DS_Store
+<<<<<<< Updated upstream
+#les datas extraites de wikipedia (dezippées)
+wiki_split_extract_2k/
+
+#fichiers temporaires python
+__pycache__/
+venv/
+
+#Fasttext files
+fasttext/cc.fr.300.vec
+fasttext/doc_vectors.npy
+fasttext/doc_names.json
+
+#Doc2vec
+doc2vec/doc_vectors.pkl
+
+=======
+.DS_Store   
 __MACOSX/
 __pycache__/
 tempCodeRunnerFile.py
