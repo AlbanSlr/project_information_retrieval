@@ -1,263 +1,176 @@
-# Information Retrieval Search Engine
+# project_information_retrieval
 ### Alban Sellier & Rémi Geraud
 
 Moteur de recherche optimisé pour Wikipédia français utilisant TF-IDF avec normalisation logarithmique et nettoyage de texte.
 
-## Vue d'ensemble du projet
+Projet de moteur de recherche combinant des approches sémantiques (SBERT, Doc2Vec, FastText) et lexicales (TF-IDF) pour la recherche d'information sur un corpus Wikipedia français.
 
-Ce projet implémente un système de recherche d'information performant pour parcourir 2 000 documents de Wikipédia en français. Le moteur utilise **TF-IDF optimisé** comme configuration principale, qui s'est révélée être la plus performante après comparaison avec différentes approches (SBERT, Hybrid).
+## Installation
 
-### Moteur principal : TF-IDF (log + cleaning)
+### Prérequis
 
-**Configuration optimale** :
-- ✅ Normalisation log(1+tf) : Réduit le biais des termes très fréquents
-- ✅ Suppression des stopwords : Filtre 583 mots français non pertinents
-- ✅ Lemmatisation spaCy : Normalise les formes de mots
-- ✅ Index inversé : Recherche rapide et efficace
+- Python 3.12
+- Conda (Anaconda ou Miniconda)
+- Fichiers de données :
+  - Dossier `wiki_split_extract_2k/` contenant les documents Wikipedia
+  - Fichier `requetes.jsonl` contenant les requêtes d'évaluation
 
-**Performance** :
-- Precision@10 : ~0.46
-- Recall@10 : ~0.52
-- F1@10 : ~0.49
+### Étapes d'installation
 
-### Études comparatives
+1. **Placer les fichiers de données à la racine du projet**
+   ```
+   project_information_retrieval/
+   ├── wiki_split_extract_2k/
+   │   ├── wiki_XXXXXX.txt
+   │   ├── wiki_XXXXXX.txt
+   │   └── ...
+   └── requetes.jsonl
+   ```
 
-Le projet inclut deux études de performance :
+2. **Créer l'environnement Conda avec Python 3.12**
+   ```powershell
+   conda create -n nom_env python=3.12
+   ```
 
-1. **Comparaison de features TF-IDF** (`compare_features.py`)
-   - Compare 4 configurations progressives
-   - Montre l'amélioration de chaque feature
-   - Génère `tfidf_features_comparison.png`
+3. **Activer l'environnement**
+   ```powershell
+   conda activate nom_env
+   ```
 
-2. **Comparaison de modèles** (`compare_models.py`)
-   - Compare TF-IDF vs SBERT vs Hybrid
-   - Démontre que TF-IDF optimisé est optimal
-   - Génère `model_comparison.png`
+4. **Installer les dépendances**
+   ```powershell
+   pip install -r requirements.txt
+   ```
+
+5. **Télécharger le modèle FastText français**
+   
+   Téléchargez le modèle pré-entraîné [ici](https://dl.fbaipublicfiles.com/fasttext/vectors-crawl/cc.fr.300.vec.gz).
+   
+
+   Puis décompressez le fichier et placez `cc.fr.300.vec` à la racine du projet.
 
 ## Structure du projet
 
 ```
 project_information_retrieval/
-├── engines/                  # Moteurs de recherche
-│   ├── base_engine.py       # Classe abstraite BaseSearchEngine
-│   ├── tfidf_engine.py      # ⭐ TF-IDF optimisé (moteur principal)
-│   └── hybrid_engine.py     # Hybrid TF-IDF + SBERT (expérimental)
-├── utils/                   # Utilitaires
-│   ├── evaluation.py        # Métriques d'évaluation
-│   └── text_processing.py   # Nettoyage de texte
-├── search_engine.py         # Point d'entrée principal
-├── compare_features.py      # Comparaison features TF-IDF
-├── compare_models.py        # Comparaison modèles
-├── requetes.jsonl          # 116 requêtes de test
-├── wiki_split_extract_2k/  # 2000 documents Wikipédia
-├── stop_words_french.json  # Stopwords français
-├── Makefile                # Automatisation
-└── README.md               # Ce fichier
+├── doc2vec/                      # Module Doc2Vec
+│   └── doc2vec.py                # Entraînement et inférence Doc2Vec
+├── engines/                      # Moteurs de recherche
+│   ├── base_engine.py            # Classe de base abstraite
+│   └── TFIDF_engine.py           # Moteur TF-IDF orienté objet
+├── evaluation/                   # Scripts d'évaluation
+│   ├── doc2vec_eval.py           # Évaluation Doc2Vec
+│   ├── fasttext_eval.py          # Évaluation FastText
+│   ├── hybrid_eval.py            # Évaluation moteur hybride
+│   ├── sbert_eval.py             # Évaluation SBERT
+│   └── TF_IDF_eval.py            # Évaluation TF-IDF
+├── fasttext/                     # Module FastText
+│   └── fasttext.py               # Vectorisation avec FastText
+├── models/                       # Modèles entraînés sauvegardés
+│   └── doc2vec.model             # (généré après entraînement)
+├── sbert/                        # Module SBERT
+│   └── sbert.py                  # Embeddings avec SBERT
+├── TFIDF/                        # Module TF-IDF
+│   └── TF_IDF.py                 # Calcul TF-IDF
+├── utils/                        # Utilitaires
+│   ├── compute_cosine_similarity.py
+│   ├── evaluation_metrics.py     # Métriques Precision@k et Recall@k
+│   ├── load_documents.py         # Chargement corpus
+│   ├── load_queries.py           # Chargement requêtes
+│   └── text_processing.py        # Nettoyage et lemmatisation
+├── wiki_split_extract_2k/        # Corpus de documents (2000 fichiers)
+├── hybrid_search.py              # MOTEUR DE RECHERCHE PRINCIPAL
+├── requetes.jsonl                # Requêtes d'évaluation
+├── requirements.txt              # Dépendances Python
+└── README.md                     # Ce fichier
 ```
 
-## Démarrage rapide
+## Utilisation
 
-### 1. Configuration de l'environnement
+### Moteur de recherche hybride (Interface console)
 
-Le projet nécessite Python 3.12. Utilisez le Makefile :
+Le moteur hybride combine SBERT (recherche sémantique) et TF-IDF (recherche lexicale) avec un poids 50/50.
 
-```bash
-make setup
+**Lancer le moteur :**
+```powershell
+python hybrid_search.py
 ```
 
-Cela va :
-- Créer un environnement virtuel Python 3.12
-- Installer les dépendances (spaCy, scikit-learn, matplotlib, numpy, sentence-transformers)
-- Télécharger le modèle français fr_core_news_sm
+**Commandes disponibles :**
+- Tapez une requête pour rechercher dans le corpus
+- `show <numero>` : affiche le contenu complet d'un document des résultats
+- `quit` ou `exit` : quitte le programme
 
-**Important** : Décompressez `wiki_split_extract_2k.zip` dans le répertoire racine.
-
-### 2. Recherche interactive
-
-Essayez le moteur TF-IDF optimisé :
-
-```bash
-make search
+**Exemple d'utilisation :**
 ```
+Recherche: Irlande
 
-Sortie attendue :
-```
-================================================================
-Starting TF-IDF search engine (log + cleaning)
-================================================================
+Recherche: 'Irlande'
+----------------------------------------------------------------------
 
-Initializing search engine...
-Loaded 2000 documents from wiki_split_extract_2k/
-Computing term frequencies...
-Computing inverse document frequencies...
-Building TF-IDF index...
-Index built with 2000 documents and ~45000 unique terms
-
-Index Statistics:
-  num_documents: 2000
-  num_unique_terms: 45123
-  use_log_tf: True
-  clean_params: {'remove_punctuation': True, 'remove_stopwords': True, 'lemmatize': True}
-
+Meilleur résultat:
 ======================================================================
-Interactive Search - Enter your queries (type 'quit' or 'exit' to stop)
+Document: wiki_039825.txt
+Score: 0.8598
 ======================================================================
+Armée républicaine irlandaise provisoire
+Pour les articles homonymes , voir Pira , Armée républicaine irlandaise et Óglaigh na hÉireann .
+L' Armée républicaine irlandaise provisoire ( irlandais : Óglaigh na hÉireann , anglais : Provisional Irish Republican Army , PIRA ) , devenue l' Armée républicaine irlandaise , est une organisation paramilitaire républicaine irlandaise considérée comme terroriste par l' Irlande , et le Royaume-Uni , , qui , de 1969 à 1997 , militait pour l' indépendance complète de l' Irlande du Nord vis-à-vis de la monarchie du Royaume-Uni , et l' instauration d' un État républicain libre et souverain sur l' ensemble de l' île d' Irlande ( Éire Nua , Nouvelle Irlande ) .
+Plus puissante organisation républicaine du conflit nord-irlandais , l' IRA provisoire est soupçonn
 
-Search query: révolution française
+[...1474 caractères restants...]
+
+----------------------------------------------------------------------
+Autres résultats (tapez 'show <numero>' pour voir):
+
+ 2. wiki_095248.txt                 Score: 0.8413
+ 3. wiki_097731.txt                 Score: 0.6796
+ 4. wiki_094672.txt                 Score: 0.6548
+ 5. wiki_045290.txt                 Score: 0.5745
+ 6. wiki_023659.txt                 Score: 0.5499
+ 7. wiki_113000.txt                 Score: 0.4777
+ 8. wiki_041649.txt                 Score: 0.4652
+ 9. wiki_059562.txt                 Score: 0.4639
+10. wiki_116932.txt                 Score: 0.4593
+...
 ```
 
-### 3. Comparaisons de performance
+## Évaluation des modèles
 
-#### Comparer les features TF-IDF
+Les scripts d'évaluation comparent différentes configurations de chaque modèle et génèrent des graphiques de performance.
 
-```bash
-make compare-features
-```
+### 1. Évaluation TF-IDF
 
 Compare 4 configurations :
-- Baseline (pas de features)
-- Baseline + Stopwords
-- Baseline + Stopwords + Lemmatize
-- ⭐ Optimized (+ log normalization)
-
-Génère : `tfidf_features_comparison.png`
-
-#### Comparer les modèles
-
-```bash
-make compare-models
+```powershell
+python evaluation\TF_IDF_eval.py
 ```
 
-Compare 3 approches :
-- ⭐ TF-IDF (log + cleaning)
-- SBERT (multilingual)
-- Hybrid (TF-IDF + SBERT)
+### 2. Évaluation Doc2Vec
 
-Génère : `model_comparison.png`
-
-#### Tout comparer
-
-```bash
-make compare
+Compare 3 tailles de vecteurs et nombres d'epochs :
+```powershell
+python evaluation\doc2vec_eval.py
 ```
 
-Lance les deux comparaisons et génère les deux graphiques.
+### 3. Évaluation FastText
 
-### 4. Nettoyage
+Compare 3 configurations :
+```powershell
+python evaluation\fasttext_eval.py
+```
+**Note :** Nécessite le fichier `cc.fr.300.vec` à la racine
 
-```bash
-make clean        # Supprime les PNG et __pycache__
-make clean-cache  # Supprime aussi data/ (caches SBERT)
-make clean-all    # Supprime tout y compris venv/
+### 4. Évaluation SBERT
+
+Compare 2 modèles pré-entraînés (MiniLM L12, MPNet) :
+```powershell
+python evaluation\sbert_eval.py
 ```
 
-## Détails techniques
+### 5. Évaluation moteur hybride
 
-### TF-IDF Optimisé
-
-**Formules** :
+Compare 5 configurations de poids SBERT/TF-IDF (0/100, 25/75, 50/50, 75/25, 100/0) :
+```powershell
+python evaluation\hybrid_eval.py
 ```
-TF (log normalization) = log(1 + count)
-IDF = log(N / df)
-TF-IDF = TF × IDF
-Similarité = cosine_similarity(query_vec, doc_vec)
-```
-
-**Prétraitement** :
-1. Tokenization (spaCy)
-2. Suppression ponctuation
-3. Suppression stopwords (583 mots)
-4. Lemmatisation (spaCy fr_core_news_sm)
-5. Normalisation log(1+tf)
-
-**Structures de données** :
-- **Index direct** : `{doc_id: {term: tf-idf}}`
-- **Index inversé** : `{term: {doc_id: tf-idf}}`
-
-### Métriques d'évaluation
-
-#### Precision@10 (Reciprocal Rank)
-```
-Precision@10 = 1 / rank_first_relevant
-```
-Mesure la position du premier document pertinent.
-
-#### Recall@10 (Binary)
-```
-Recall@10 = 1 si ≥1 document pertinent dans top 10, sinon 0
-```
-
-#### F1@10
-```
-F1@10 = 2 × (Precision × Recall) / (Precision + Recall)
-```
-
-## Résultats et conclusions
-
-### Pourquoi TF-IDF (log + cleaning) est optimal ?
-
-Après comparaison exhaustive, TF-IDF optimisé s'est révélé être le meilleur choix pour ce projet :
-
-**Avantages** :
-- ✅ **Performance** : F1@10 ~0.49 (compétitif avec SBERT)
-- ✅ **Rapidité** : Construction d'index < 5s, recherche instantanée
-- ✅ **Simplicité** : Pas de modèle externe lourd
-- ✅ **Interprétabilité** : Scores TF-IDF explicables
-- ✅ **Robustesse** : Fonctionne bien sur requêtes par mots-clés
-
-**Comparaison avec alternatives** :
-- SBERT : Meilleure sémantique mais 10x plus lent et moins explicable
-- Hybrid : Légèrement meilleur F1 mais complexité excessive
-- Doc2Vec/FastText : Performances inférieures à TF-IDF optimisé
-
-### Impact des features
-
-| Configuration | Precision@10 | Recall@10 | F1@10 | Amélioration |
-|---------------|--------------|-----------|-------|--------------|
-| Baseline | 0.342 | 0.415 | 0.375 | - |
-| + Stopwords | 0.398 | 0.469 | 0.431 | +0.056 |
-| + Lemmatize | 0.421 | 0.495 | 0.456 | +0.025 |
-| **+ Log normalization** | **0.458** | **0.523** | **0.488** | **+0.032** |
-
-Chaque feature apporte une amélioration mesurable, avec la normalisation logarithmique donnant le gain final significatif.
-
-## Dépendances
-
-- **Python** : 3.12 (requis pour compatibilité NumPy/spaCy)
-- **spaCy** : 3.x avec fr_core_news_sm
-- **scikit-learn** : TF-IDF et similarité cosinus
-- **matplotlib** : Visualisation des performances
-- **numpy** : Opérations matricielles
-- **sentence-transformers** : Pour comparaison avec SBERT (optionnel)
-
-## Commandes Makefile
-
-```bash
-make help             # Affiche l'aide
-make setup            # Configuration complète
-make search           # Recherche interactive
-make compare-features # Compare features TF-IDF
-make compare-models   # Compare modèles
-make compare          # Les deux comparaisons
-make clean            # Supprime PNG et caches Python
-make clean-cache      # Supprime data/ (modèles)
-make clean-all        # Supprime tout (venv inclus)
-```
-
-## Notes importantes
-
-1. **Première exécution** : Construction de l'index TF-IDF prend ~5 secondes.
-
-2. **Modèles optionnels** : SBERT et Hybrid sont implémentés pour comparaison mais ne sont pas le moteur principal.
-
-3. **Compatibilité Python** : Python 3.12 requis pour éviter les problèmes NumPy/spaCy.
-
-## Contribution
-
-Projet développé par :
-- **Alban Sellier** : Architecture, TF-IDF optimisé, évaluation
-- **Rémi Geraud** : Exploration SBERT, FastText, Doc2Vec
-
-## Licence
-
-Projet académique - Master 2 TAL (Traitement Automatique des Langues)

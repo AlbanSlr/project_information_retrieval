@@ -23,3 +23,9 @@ wiki_split_extract_2k/
 # Backup files
 *.bak
 README.md.bak
+
+# models
+cc.fr.300.vec
+*.model
+*.bin
+*.npy
