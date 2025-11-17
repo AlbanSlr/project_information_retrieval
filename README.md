@@ -1,8 +1,6 @@
 # project_information_retrieval
 ### Alban Sellier & Rémi Geraud
 
-Moteur de recherche optimisé pour Wikipédia français utilisant TF-IDF avec normalisation logarithmique et nettoyage de texte.
-
 Projet de moteur de recherche combinant des approches sémantiques (SBERT, Doc2Vec, FastText) et lexicales (TF-IDF) pour la recherche d'information sur un corpus Wikipedia français.
 
 ## Installation
